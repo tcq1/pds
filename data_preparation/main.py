@@ -2,6 +2,7 @@ import sqlite3
 import requests
 from requests.auth import HTTPBasicAuth
 import pandas as pd
+import zipfile
 
 
 def get_databases_from_source():
@@ -28,6 +29,7 @@ def main():
     table_old = pd.read_sql_query("SELECT * from dwd", db_old)
     table_old.to_csv('table.csv', index_label='index')
 
+    
 
 if __name__ == '__main__':
     main()
