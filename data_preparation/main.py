@@ -2,6 +2,8 @@ import sqlite3
 import requests
 from requests.auth import HTTPBasicAuth
 import pandas as pd
+from zipfile import ZipFile
+import io
 
 
 def get_databases_from_source():
@@ -9,15 +11,18 @@ def get_databases_from_source():
     db_old_url = 'https://wwwdb.inf.tu-dresden.de/misc/WS2021/PDS/the.db'
     db_old_login = HTTPBasicAuth('tud', 'dbs')
 
-    # db_new_url = 'fill_this_out'
+    db_new_url = 'https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes' \
+                 '/air_temperature/recent/10minutenwerte_TU_01048_akt.zip'
 
     # create GET requests
     db_old_request = requests.get(db_old_url, auth=db_old_login)
-    # db_new_request = requests.get(db_new_url)
+    db_new_request = requests.get(db_new_url)
 
-    # store content of GET requests in a sql file
+    # store content of GET requests in a file
     open('old_db.sql', 'wb').write(db_old_request.content)
-    # open('new_db.sql', 'wb').write(db_new_request.content)
+    zip_file = io.BytesIO(db_new_request.content)
+
+    ZipFile(zip_file).extractall()
 
 
 def main():
@@ -31,4 +36,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
