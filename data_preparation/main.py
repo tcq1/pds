@@ -151,6 +151,10 @@ def calc_average_temp(df):
 
 
 def main():
+    # specify output paths
+    output_json = 'output.json'
+    output_avg = 'avg_tmp.csv'
+
     # task 1 and 2
     get_csv_files_from_source()
     old = pd.read_csv('old.csv')
@@ -161,11 +165,12 @@ def main():
     # task 4
     # append tables
     concat = concat_dataframes(old, dwd)
-    concat.to_json('output.json')
+    concat.to_json(output_json)
 
     # calculate averages and store
     avg_table = calc_average_temp(concat)
-    avg_table.to_csv('avg_tmp.csv')
+    # It was not clear to me how the average temperature table should be saved. I chose a csv file
+    avg_table.to_csv(output_avg)
 
 
 if __name__ == '__main__':
