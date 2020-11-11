@@ -94,7 +94,21 @@ def replace_with_nan(data, indices_to_delete):
 
     return data
 
+
 # ----------------------------------------------------------------------------------------------------------------
+def find_missing_values(data):
+    """ Finds missing timestamps and sets their values to np.nan
+
+    :param data: numpy arary
+    :return: numpy array
+    """
+    df = pd.DataFrame(data, columns=['timestamp', 'temperature'])
+    new_df = pd.DataFrame(pd.date_range(start=min(df["timestamp"]), end=max(df["timestamp"]), freq="10min"),
+                          columns=["timestamp"])
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    new_df = new_df.merge(df, on="timestamp", how="left")
+
+    return new_df.to_numpy()
 
 
 def find_nan_bounds(data):
@@ -109,8 +123,8 @@ def find_nan_bounds(data):
 
     while i < len(data):
         if np.isnan(data[i][1]):
-            lower = i-1
-            j = i+1
+            lower = i - 1
+            j = i + 1
             while np.isnan(data[j][1]):
                 j += 1
             upper = j
@@ -129,7 +143,7 @@ def linear_interpolation(data):
     :return: numpy array
     """
 
-    print('\n---- Linear interpolation ----')
+    print('\n---- Linear interpolation ----\n')
 
     interpolated = np.copy(data)
     nan_bounds = find_nan_bounds(data)
@@ -137,9 +151,11 @@ def linear_interpolation(data):
     for bound in nan_bounds:
         slope = (interpolated[bound[1]][1] - interpolated[bound[0]][1]) / (bound[1] - bound[0])
         nan_list = list(range(bound[0] + 1, bound[1]))
+        print('---- {}: {} ----'.format(interpolated[bound[0]][0], interpolated[bound[0]][1]))
         for i in range(len(nan_list)):
-            interpolated[nan_list[i]][1] = slope * (i+1) + interpolated[bound[0]][1]
+            interpolated[nan_list[i]][1] = slope * (i + 1) + interpolated[bound[0]][1]
             print('New value for {}: {}'.format(interpolated[nan_list[i]][0], interpolated[nan_list[i]][1]))
+        print('---- {}: {} ----\n'.format(interpolated[bound[1]][0], interpolated[bound[1]][1]))
 
     return interpolated
 
@@ -151,7 +167,7 @@ def step_interpolation(data):
     :return: numpy array
     """
 
-    print('\n---- Step interpolation ----')
+    print('\n---- Step interpolation ----\n')
 
     interpolated = np.copy(data)
     nan_bounds = find_nan_bounds(data)
@@ -159,12 +175,14 @@ def step_interpolation(data):
     for bound in nan_bounds:
         nan_list = list(range(bound[0] + 1, bound[1]))
         mid_index = np.floor(len(nan_list) / 2)
+        print('---- {}: {} ----'.format(interpolated[bound[0]][0], interpolated[bound[0]][1]))
         for i in range(len(nan_list)):
             if i <= mid_index:
                 interpolated[nan_list[i]][1] = interpolated[bound[0]][1]
             else:
                 interpolated[nan_list[i]][1] = interpolated[bound[1]][1]
             print('New value for {}: {}'.format(interpolated[nan_list[i]][0], interpolated[nan_list[i]][1]))
+        print('---- {}: {} ----\n'.format(interpolated[bound[1]][0], interpolated[bound[1]][1]))
 
     return interpolated
 
@@ -172,15 +190,19 @@ def step_interpolation(data):
 def main():
     # read csv and save as numpy array
     df = pd.read_csv('data-cleaning.csv')
+
     data = df.to_numpy()
 
     # get filtered data
     filtered_data = iqr_filter(data)
     filtered_data2 = z_score_filter(data)
 
+    # get all missing timestamps
+    data_with_gaps = find_missing_values(filtered_data2)
+
     # get interpolated data
-    li = linear_interpolation(filtered_data2)
-    si = step_interpolation(filtered_data2)
+    li = linear_interpolation(data_with_gaps)
+    si = step_interpolation(data_with_gaps)
 
     # plotting
     ax = plt.gca()
