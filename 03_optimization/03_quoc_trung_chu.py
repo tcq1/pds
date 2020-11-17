@@ -5,7 +5,7 @@ from timeit import default_timer as timer
 
 
 # dataframe from given cost file
-df = pd.read_csv('cost.csv', header=None)
+df = pd.read_csv('cost.csv', header=None, dtype=int)
 
 
 def grid_search():
@@ -37,10 +37,8 @@ def cost_function(params):
     """
     # since we can only use positive integers to use iloc: cast possible float values to int
     x, y = params.astype(int)
-    if x < 0:
-        x = 0
-    if y < 0:
-        y = 0
+    if not 0 <= x < df.shape[0] or not 0 <= y < df.shape[1]:
+        return 100000000
         
     return df.iloc[x][y]
 
@@ -77,12 +75,16 @@ def nelder_mead(dimensions, alp, gam, rho, sig, thr):
         # decide replacement method
         if points[0][0] <= reflection(alp, points[0], centroid)[0] < points[-2][0]:
             xr = reflection(alp, points[-1], centroid)
-            xe = expansion(gam, xr, centroid)
-            if xe[0] < xr[0]:
-                print('Performing reflection')
-                points[-1] = xe
+            if xr[0] < points[0][0]:
+                xe = expansion(gam, xr, centroid)
+                if xe[0] < xr[0]:
+                    print('Performing expansion')
+                    points[-1] = xe
+                else:
+                    print('Performing reflection')
+                    points[-1] = xr
             else:
-                print('Performing expansion')
+                print('Performing reflection')
                 points[-1] = xr
         else:
             xc = contraction(rho, points[-1], centroid)
@@ -238,10 +240,12 @@ def gradient_task_2(params):
     :return: gradient
     """
     x, y = params
-    x_grad = 2 * (x*y**6 + x*y**4 - 2*x*y**3 - x*y**2 - 2*x*y + 2.625*y**3 + 2.25*y**2 + 1.5*y + 3*x - 6.375)
-    y_grad = 2 * (3*x**2*y**3 + 2*x**2*y**2 + x**2*y - 6*x**2 + 13.875*x)
+    x_grad = (-2 + 2 * y) * (1.5 - x + x * y) + (-2 + 2 * y ** 2) * (2.25 - x + x * y ** 2) + \
+             (-2 + 2 * y ** 3) * (2.625 - x + x * y ** 3)
+    y_grad = (2 * x) * (1.5 - x + x * y) + (4 * x * y) * (2.25 - x + x * y ** 2) + \
+             (6 * x * y**2) * (2.625 - x + x * y ** 3)
 
-    return [x_grad, y_grad]
+    return np.array([x_grad, y_grad])
 
 
 def task2():
@@ -250,7 +254,6 @@ def task2():
     """
     x0 = np.array([1, 1])
 
-    print('----- TASK 2 -----')
     print('without pre-calculated gradient:')
     start1 = timer()
     result = minimize(function_task_2, x0=x0, method='CG')
@@ -260,7 +263,7 @@ def task2():
 
     print('with pre-calculated gradient:')
     start2 = timer()
-    result = minimize(function_task_2, x0=x0, method='CG', jac=gradient_task_2)
+    result = minimize(function_task_2, x0=x0, jac=gradient_task_2, method='CG')
     end2 = timer()
     print('Time elapsed: {}'.format(end2 - start2))
     print(result)
@@ -268,10 +271,11 @@ def task2():
 
 def main():
     print('----------------- Nelder Mead -----------------')
-    random_restart(2, 1, 2, 0.5, 0.5, 2, 100)
-
+    random_restart(2, 1, 2, 0.5, 0.5, 2, 250)
     # grid_search()
-    # task2()
+
+    print('----------------- Minimize -----------------')
+    task2()
 
 
 if __name__ == '__main__':
