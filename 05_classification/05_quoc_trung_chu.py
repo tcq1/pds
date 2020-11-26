@@ -162,6 +162,7 @@ def find_label(node, attribute_values):
     """ Takes a dataframe of attribute values and finds the label by traversing through the decision tree of the
         specified root
     """
+    print('Traversing path: ')
 
     while not node.is_leaf_node():
         print('Current node: {}'.format(node.get_id()))
