@@ -4,6 +4,18 @@ import numpy as np
 from timeit import default_timer as timer
 
 
+def euclidian_distance(point_a, point_b):
+    """ Calculates euclidian distance between both points
+
+    :param point_a: numpy array
+    :param point_b: numpy array
+    """
+    return np.linalg.norm(point_a - point_b)
+# distance measures
+# -------------------------------------------------------------------------------------------------
+# kMeans
+
+
 def initialize_centroids(k):
     """ Initialize random points with labels.
 
@@ -18,15 +30,6 @@ def initialize_centroids(k):
         centroids.append(centroid)
 
     return np.array(centroids)
-
-
-def euclidian_distance(point_a, point_b):
-    """ Calculates euclidian distance between both points
-
-    :param point_a: numpy array
-    :param point_b: numpy array
-    """
-    return np.linalg.norm(point_a - point_b)
 
 
 def get_closest_centroid(centroids, point):
@@ -108,6 +111,13 @@ def k_means(points, k):
 
     return clustering
 
+# kMeans
+# -------------------------------------------------------------------------------------------------
+# hierarchical clustering
+
+
+# hierarchical clustering
+# -------------------------------------------------------------------------------------------------
 
 def plot_clustering(assignment):
     """ Plots data points with assigned labels.
@@ -132,7 +142,7 @@ def main():
     # kMeans
     start_clustering = timer()
 
-    centroids = k_means(dataset, k=6)
+    centroids = k_means(dataset, k=4)
     assignment = assign_points_to_centroid(dataset, centroids)
 
     end_clustering = timer()
