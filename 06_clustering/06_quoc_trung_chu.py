@@ -11,6 +11,63 @@ def euclidian_distance(point_a, point_b):
     :param point_b: numpy array
     """
     return np.linalg.norm(point_a - point_b)
+
+
+def single_link_distance(cluster_a, cluster_b):
+    """ Calculates single link distance between two clusters.
+
+    :param cluster_a: numpy array of shape [n_points, n_dimensions]
+    :param cluster_b: numpy array of shape [n_points, n_dimensions]
+    """
+    distance = 99999999999
+    for point_a in cluster_a:
+        for point_b in cluster_b:
+            if euclidian_distance(point_a, point_b) < distance:
+                distance = euclidian_distance(point_a, point_b)
+
+    return distance
+
+
+def complete_link_distance(cluster_a, cluster_b):
+    """ Calculates complete link distance between two clusters.
+
+    :param cluster_a: numpy array of shape [n_points, n_dimensions]
+    :param cluster_b: numpy array of shape [n_points, n_dimensions]
+    """
+    distance = 0
+    for point_a in cluster_a:
+        for point_b in cluster_b:
+            if euclidian_distance(point_a, point_b) > distance:
+                distance = euclidian_distance(point_a, point_b)
+
+    return distance
+
+
+def average_link_distance(cluster_a, cluster_b):
+    """ Calculates average link distance between two clusters.
+
+    :param cluster_a: numpy array of shape [n_points, n_dimensions]
+    :param cluster_b: numpy array of shape [n_points, n_dimensions]
+    """
+    dist_sum = 0
+    for point_a in cluster_a:
+        for point_b in cluster_b:
+            dist_sum += euclidian_distance(point_a, point_b)
+
+    return dist_sum/(len(cluster_a) * len(cluster_b))
+
+
+def centroid_link_distance(cluster_a, cluster_b):
+    """ Calculates centroid link distance between two clusters.
+
+    :param cluster_a: numpy array of shape [n_points, n_dimensions]
+    :param cluster_b: numpy array of shape [n_points, n_dimensions]
+    """
+    centroid_a = np.mean(cluster_a, axis=0)
+    centroid_b = np.mean(cluster_b, axis=0)
+
+    return euclidian_distance(centroid_a, centroid_b)
+
 # distance measures
 # -------------------------------------------------------------------------------------------------
 # kMeans
@@ -26,7 +83,7 @@ def initialize_centroids(k):
     # create k centroids
     for i in range(k):
         # random values from 0 to 15
-        centroid = np.random.random(2)*15
+        centroid = np.random.random(2) * 15
         centroids.append(centroid)
 
     return np.array(centroids)
@@ -111,13 +168,95 @@ def k_means(points, k):
 
     return clustering
 
+
 # kMeans
 # -------------------------------------------------------------------------------------------------
 # hierarchical clustering
 
+def find_closest_clusters(clusters, distance_function):
+    """ Finds the two clusters that have the smallest distance based on the given distance_function.
+
+    :param clusters: List of clusters
+    :param distance_function: one of the functions that are defined on the top of this python file
+    :return: indices of the two clusters that have to be merged
+    """
+    # get first two elements as pivot
+    to_merge = [0, 1]
+    for i in range(len(clusters)):
+        for j in range(len(clusters)):
+            # make sure to not compare the same cluster to itself
+            if i == j:
+                continue
+            if distance_function(np.array(clusters[i]), np.array(clusters[j])) < \
+                    distance_function(np.array(clusters[to_merge[0]]), np.array(clusters[to_merge[1]])):
+                to_merge = [i, j]
+
+    return to_merge
+
+
+def append_cluster(cluster_a, cluster_b):
+    """ Appends cluster_b to cluster_a
+
+    :param cluster_a: array of shape [n_points, n_dimensions]
+    :param cluster_b: array of shape [n_points, n_dimensions]
+    """
+    for point in cluster_b:
+        cluster_a.append(point)
+
+    return cluster_a
+
+
+def assign_points_to_clusters(clusters):
+    """ Assigns all points to clusters like in the assignment method of the kMeans algorithm.
+    Simplifies handling of output of both methods
+
+    :param clusters: output of agnes()
+    :return: dictionary with index of cluster center (label) as key and numpy array of assigned points as value
+    """
+    # initialize assignment
+    assignment = {i: None for i in range(len(clusters))}
+
+    # iterate over clusters
+    for i in range(len(clusters)):
+        for point in clusters[i]:
+            if assignment[i] is None:
+                assignment[i] = np.atleast_2d(np.array(point))
+            else:
+                # else stack point to existing numpy array
+                assignment[i] = np.vstack([assignment[i], point])
+
+    return assignment
+
+
+def agnes(points, distance_function=single_link_distance, stop_distance=None):
+    """ Implementation of the agnes clustering algorithm.
+
+    :param points: dataset of points
+    :param distance_function: one of the functions that are defined on the top of this python file
+    :param stop_distance: stops the tree building process if stop_distance is exceeded (simulates the tree cut)
+    :return: clusters
+    """
+    # convert to list TODO: try to make work with np arrays
+    clusters = points.tolist()
+    for i in range(len(clusters)):
+        clusters[i] = [clusters[i]]
+    while len(clusters) > 1:
+        start = timer()
+        to_merge = find_closest_clusters(clusters, distance_function)
+        end = timer()
+        print('Finding this merge took {}s'.format(end-start))
+        print('Current shortest distance: {}'.format(distance_function(np.array(clusters[to_merge[0]]),
+                                                                       np.array(clusters[to_merge[1]]))))
+        if stop_distance is not None:
+            if distance_function(np.array(clusters[to_merge[0]]), np.array(clusters[to_merge[1]])) > stop_distance:
+                break
+        append_cluster(clusters[to_merge[0]], clusters.pop(to_merge[1]))
+
+    return clusters
 
 # hierarchical clustering
 # -------------------------------------------------------------------------------------------------
+
 
 def plot_clustering(assignment):
     """ Plots data points with assigned labels.
@@ -126,7 +265,7 @@ def plot_clustering(assignment):
     """
     for cluster in assignment.values():
         # generate random color for this cluster
-        color = np.random.rand(3,)
+        color = np.random.rand(3, )
         for point in cluster:
             plt.scatter(point[0], point[1], color=color)
 
@@ -141,9 +280,12 @@ def main():
 
     # kMeans
     start_clustering = timer()
+    print('Started at 11:37')
+    # centroids = k_means(dataset, k=4)
+    # assignment = assign_points_to_centroid(dataset, centroids)
 
-    centroids = k_means(dataset, k=4)
-    assignment = assign_points_to_centroid(dataset, centroids)
+    clusters = agnes(dataset, distance_function=centroid_link_distance, stop_distance=0.2)
+    assignment = assign_points_to_clusters(clusters)
 
     end_clustering = timer()
     print('Clustering took {}s'.format(end_clustering - start_clustering))
