@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from timeit import default_timer as timer
+from scipy.spatial import distance_matrix
 
 
 def euclidian_distance(point_a, point_b):
@@ -19,13 +20,8 @@ def single_link_distance(cluster_a, cluster_b):
     :param cluster_a: numpy array of shape [n_points, n_dimensions]
     :param cluster_b: numpy array of shape [n_points, n_dimensions]
     """
-    distance = 99999999999
-    for point_a in cluster_a:
-        for point_b in cluster_b:
-            if euclidian_distance(point_a, point_b) < distance:
-                distance = euclidian_distance(point_a, point_b)
 
-    return distance
+    return min(euclidian_distance(point_a, point_b) for point_a in cluster_a for point_b in cluster_b)
 
 
 def complete_link_distance(cluster_a, cluster_b):
@@ -34,13 +30,7 @@ def complete_link_distance(cluster_a, cluster_b):
     :param cluster_a: numpy array of shape [n_points, n_dimensions]
     :param cluster_b: numpy array of shape [n_points, n_dimensions]
     """
-    distance = 0
-    for point_a in cluster_a:
-        for point_b in cluster_b:
-            if euclidian_distance(point_a, point_b) > distance:
-                distance = euclidian_distance(point_a, point_b)
-
-    return distance
+    return max(euclidian_distance(point_a, point_b) for point_a in cluster_a for point_b in cluster_b)
 
 
 def average_link_distance(cluster_a, cluster_b):
@@ -54,7 +44,8 @@ def average_link_distance(cluster_a, cluster_b):
         for point_b in cluster_b:
             dist_sum += euclidian_distance(point_a, point_b)
 
-    return dist_sum/(len(cluster_a) * len(cluster_b))
+    return sum(euclidian_distance(point_a, point_b)
+               for point_a in cluster_a for point_b in cluster_b) / (len(cluster_a) * len(cluster_b))
 
 
 def centroid_link_distance(cluster_a, cluster_b):
@@ -67,6 +58,7 @@ def centroid_link_distance(cluster_a, cluster_b):
     centroid_b = np.mean(cluster_b, axis=0)
 
     return euclidian_distance(centroid_a, centroid_b)
+
 
 # distance measures
 # -------------------------------------------------------------------------------------------------
@@ -172,6 +164,14 @@ def k_means(points, k):
 # kMeans
 # -------------------------------------------------------------------------------------------------
 # hierarchical clustering
+# def distance_matrix(points, distance_function):
+#     dist_mat = np.zeros((len(points), len(points)), dtype=np.float)
+#     for i in range(len(points)):
+#         for j in range(len(points)):
+#             dist_mat[i][j] = distance_function(points[i], points[j])
+#
+#     return dist_mat
+
 
 def find_closest_clusters(clusters, distance_function):
     """ Finds the two clusters that have the smallest distance based on the given distance_function.
@@ -244,7 +244,7 @@ def agnes(points, distance_function=single_link_distance, stop_distance=None):
         start = timer()
         to_merge = find_closest_clusters(clusters, distance_function)
         end = timer()
-        print('Finding this merge took {}s'.format(end-start))
+        print('Finding this merge took {}s'.format(end - start))
         print('Current shortest distance: {}'.format(distance_function(np.array(clusters[to_merge[0]]),
                                                                        np.array(clusters[to_merge[1]]))))
         if stop_distance is not None:
@@ -253,6 +253,48 @@ def agnes(points, distance_function=single_link_distance, stop_distance=None):
         append_cluster(clusters[to_merge[0]], clusters.pop(to_merge[1]))
 
     return clusters
+
+
+def agnes2(points):
+    clusters = []
+
+    dist = distance_matrix(points, points)
+    dist[dist == 0] = np.inf
+
+    for i in range(len(points)):
+        clusters[i] = [points[i]]
+
+    while len(clusters) > 1:
+        pass
+
+    print(dist)
+    print(clusters)
+
+    return True
+
+
+def test(data):
+    combined_clusters = {}
+    count = 0
+
+    while len(data) > 1:
+        dist = distance_matrix(data, data)
+        dist[dist == 0] = np.inf
+
+        min_dist_index = np.unravel_index(dist.argmin(), dist.shape)
+        min_dist = dist[min_dist_index]
+
+        closest_clusters = data.index[list(min_dist_index)]
+
+        cluster_name = 'c{}'.format(count)
+        combined_clusters[cluster_name] = list(closest_clusters) + [min_dist]
+
+        data.loc[cluster_name] = data.loc[closest_clusters].mean()
+        data = data.drop(closest_clusters)
+
+        count += 1
+
+    return combined_clusters
 
 # hierarchical clustering
 # -------------------------------------------------------------------------------------------------
@@ -278,20 +320,21 @@ def main():
     df = pd.read_csv(file_path)
     dataset = df.to_numpy()
 
-    # kMeans
     start_clustering = timer()
-    print('Started at 11:37')
+
+    # kMeans
     # centroids = k_means(dataset, k=4)
     # assignment = assign_points_to_centroid(dataset, centroids)
 
-    clusters = agnes(dataset, distance_function=centroid_link_distance, stop_distance=0.2)
-    assignment = assign_points_to_clusters(clusters)
+    # clusters = agnes(dataset, stop_distance=0.1)
+    # assignment = assign_points_to_clusters(clusters)
+    print(agnes2(dataset))
 
     end_clustering = timer()
     print('Clustering took {}s'.format(end_clustering - start_clustering))
 
     # plotting
-    plot_clustering(assignment)
+    # plot_clustering(assignment)
 
 
 if __name__ == '__main__':
