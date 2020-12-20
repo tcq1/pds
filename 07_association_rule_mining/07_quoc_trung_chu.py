@@ -1,10 +1,11 @@
 import itertools
 import numpy as np
+import os
 
 from timeit import default_timer as timer
 
 
-def get_support_apriori(items, dataset):
+def get_support(items, dataset):
     """ Gets support of an item in a dataset with a horizontal layout.
 
     :param items: set of items
@@ -14,22 +15,6 @@ def get_support_apriori(items, dataset):
     support_set = [items.issubset(x) for x in dataset]
 
     return support_set.count(True) / len(dataset)
-
-
-def get_support_eclat(items, item_dict, dataset):
-    """ Gets support of an item in a dataset with a vertical layout.
-
-    :param items: set of items
-    :param item_dict: vertical layout
-    :param dataset: list of transactions
-    """
-    items = list(items)
-    transactions = item_dict[items[0]]
-
-    for item in items:
-        transactions = transactions.intersection(item_dict[item])
-
-    return len(transactions) / len(dataset)
 
 
 def get_subsets(itemset, length):
@@ -68,18 +53,18 @@ def apriori_gen(k_minus_one_itemsets):
 
     :param k_minus_one_itemsets: set of frequent k-1 itemsets
     """
-    Ck = set()
+    C = set()
     k = len(next(iter(k_minus_one_itemsets)))
 
     # merge all sets in k_minus_one_itemsets and add those that have length k
     for p in k_minus_one_itemsets:
         for q in k_minus_one_itemsets:
             if len(p.union(q)) == k + 1:
-                Ck.add(p.union(q))
+                C.add(p.union(q))
 
     # pruning
     to_remove = []
-    for itemset in Ck:
+    for itemset in C:
         # get k-1 subsets
         k_minus_one_subsets = get_subsets(itemset, k)
         # check if k-1 subsets in k-1 fis
@@ -87,9 +72,9 @@ def apriori_gen(k_minus_one_itemsets):
             to_remove.append(itemset)
     # remove items
     for tr in to_remove:
-        Ck.remove(tr)
+        C.remove(tr)
 
-    return Ck
+    return C
 
 
 def apriori(items, dataset, minsupp):
@@ -101,23 +86,23 @@ def apriori(items, dataset, minsupp):
     :return: frequent item sets
     """
     # note: 1-itemsets are in Lk[0], 2-itemsets are in Lk[1], etc.
-    Lk = [set(frozenset([item]) for item in items if get_support_apriori({item}, dataset) >= minsupp)]
+    L = [set(frozenset([item]) for item in items if get_support_apriori({item}, dataset) >= minsupp)]
     k = 1
 
     # while we can still generate frequent itemsets
-    while len(Lk[k-1]) > 0:
+    while len(L[k-1]) > 0:
         # get candidates for k-itemset from k-1 itemset
-        Ck = apriori_gen(Lk[k-1])
+        Ck = apriori_gen(L[k-1])
         fis_k = set()
         # pruning to get frequent itemsets from Ck
         for candidate in Ck:
-            if get_support_apriori(candidate, dataset) >= minsupp:
+            if get_support(candidate, dataset) >= minsupp:
                 fis_k.add(candidate)
         # add frequent k-itemset to Lk
-        Lk.append(fis_k)
+        L.append(fis_k)
         k += 1
 
-    return set.union(*Lk)
+    return set.union(*L)
 
 
 def get_vertical_layout(items, dataset):
@@ -140,38 +125,47 @@ def get_vertical_layout(items, dataset):
 def eclat(items, dataset, minsupp):
     """ Implementation of the eclat algorithm.
 
+    Data structure from a priori implementation can't be used since it was implemented with sets of sets.
+    Prefixes can't be obtained from frozenset since order is not changeable.
+
     :param items: list of items
     :param dataset: np array with transactions
     :param minsupp: min support
     :return: frequent item sets
     """
     item_dict = get_vertical_layout(items, dataset)
-    to_remove = []
-    for item in item_dict.keys():
-        if get_support_eclat([item], item_dict, dataset) < minsupp:
-            to_remove.append(item)
-    for tr in to_remove:
-        item_dict.pop(tr)
 
-    Lk = [set(frozenset([item]) for item in item_dict.keys())]
+    L1 = {k: v for k, v in item_dict.items() if len(v) / len(dataset) >= minsupp}
     k = 1
 
-    while len(Lk[k-1]) > 0:
-        Ck = apriori_gen(Lk[k - 1])
-        fis_k = set()
-        # pruning to get frequent itemsets from Ck
-        for candidate in Ck:
-            if get_support_eclat(candidate, item_dict, dataset) >= minsupp:
-                fis_k.add(candidate)
-        # add frequent k-itemset to Lk
-        Lk.append(fis_k)
+    L = L1
+    Lk = []
+
+    while L.keys():
+        Lk.append(L)
+        Lnext = {}
+        # iterate over all combinations of the items from k-1 itemsets with one more item
+        for combination in itertools.combinations(L.keys(), 2):
+            if k > 1:
+                # check if same prefix with length of at least k, if not -> skip
+                prefix_length = len(os.path.commonprefix(combination).split(" "))
+                if prefix_length < k-1:
+                    continue
+
+            # create new key
+            key = " ".join(sorted(set([y for x in combination for y in x.split(" ")])))
+            Lnext[key] = item_dict[combination[0]].intersection(*[item_dict[x] for x in combination[1:]])
+
+        # update L to current frequent itemsets
+        L = {k: v for k, v in Lnext.items() if len(v) / len(dataset) >= minsupp}
+        item_dict = Lnext
         k += 1
 
-    return set.union(*Lk)
+    return Lk
 
 
 def read_file(file_path):
-    """ There are problems with pd.read_csv() that's why this implementation.
+    """ There are problems with pd.read_csv() for the retail.csv that's why this implementation.
 
     :param file_path: path to file
     :return: List of transactions with items
@@ -195,8 +189,8 @@ def run_apriori(items, dataset, minsupp):
     start = timer()
     fis = apriori(items, dataset, minsupp=minsupp)
     end = timer()
-    # for f in fis:
-    #     print('{}'.format(f))
+    for f in fis:
+        print('{}'.format(f))
     print('Found {} frequent itemsets'.format(len(fis)))
     print('Done after {}s!'.format(end - start))
 
@@ -206,20 +200,23 @@ def run_eclat(items, dataset, minsupp):
     start = timer()
     fis = eclat(items, dataset, minsupp=minsupp)
     end = timer()
-    # for f in fis:
-    #     print('{}'.format(f))
-    print('Found {} frequent itemsets'.format(len(fis)))
+    for f in fis:
+        print('{}'.format(f))
+    lenfis = 0
+    for f in fis:
+        lenfis += len(f)
+    print('Found {} frequent itemsets'.format(lenfis))
     print('Done after {}s!'.format(end - start))
 
 
 def main():
-    file_path = 'retail.tsv'
-    minsupp = 0.1
+    # file_path = 'retail.tsv'
+    # minsupp = 0.1
     # results: ECLAT: 257.1290893s
     #       A PRIORI: 610.4664944000001s
 
-    # file_path = 'items.tsv'
-    # minsupp = 0.7
+    file_path = 'items.tsv'
+    minsupp = 0.7
     # results: ECLAT: 0.0005955000000000127s
     #       A PRIORI: 0.0009656999999999999s
 
