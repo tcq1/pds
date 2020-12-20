@@ -86,7 +86,7 @@ def apriori(items, dataset, minsupp):
     :return: frequent item sets
     """
     # note: 1-itemsets are in Lk[0], 2-itemsets are in Lk[1], etc.
-    L = [set(frozenset([item]) for item in items if get_support_apriori({item}, dataset) >= minsupp)]
+    L = [set(frozenset([item]) for item in items if get_support({item}, dataset) >= minsupp)]
     k = 1
 
     # while we can still generate frequent itemsets
@@ -189,8 +189,8 @@ def run_apriori(items, dataset, minsupp):
     start = timer()
     fis = apriori(items, dataset, minsupp=minsupp)
     end = timer()
-    for f in fis:
-        print('{}'.format(f))
+    # for f in fis:
+    #     print('{}'.format(f))
     print('Found {} frequent itemsets'.format(len(fis)))
     print('Done after {}s!'.format(end - start))
 
@@ -200,8 +200,8 @@ def run_eclat(items, dataset, minsupp):
     start = timer()
     fis = eclat(items, dataset, minsupp=minsupp)
     end = timer()
-    for f in fis:
-        print('{}'.format(f))
+    # for f in fis:
+    #     print('{}'.format(f))
     lenfis = 0
     for f in fis:
         lenfis += len(f)
