@@ -6,17 +6,19 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 
 
-def split_data(df):
+def split_data(df, random_state, validation_size):
     """ Takes a dataframe, splits it up in feature and label data and returns that data split into
     training and validation data.
 
     :param df: pandas dataframe
+    :param random_state: seed for randomization of split
+    :param validation_size: size of validation set, value between 0 and 1
     :return: x_training, x_validation, y_training, y_validation
     """
     feature_data, label_data = split_feature_label_data(df)
 
     # don't shuffle data to make results reproducible
-    return train_test_split(feature_data, label_data, test_size=0.2, random_state=123)
+    return train_test_split(feature_data, label_data, test_size=validation_size, random_state=random_state)
 
 
 def split_feature_label_data(df):
@@ -70,7 +72,7 @@ def get_pairs_from_correlations(correlating_features):
     """ Get a list of pairs of correlating features.
 
     :param correlating_features: list of indices from the correlation matrix
-    :return list of tuples
+    :return: list of tuples
     """
     pairs = []
     for i in range(len(correlating_features[0])):
@@ -163,7 +165,9 @@ def pca(df, p):
 def main():
     file_path = 'diabetes.csv'
     df = pd.read_csv(file_path)
-    x_training, x_validation, y_training, y_validation = split_data(df)
+    random_state = 1337
+    validation_size = 0.2
+    x_training, x_validation, y_training, y_validation = split_data(df, random_state, validation_size)
 
     task_1_2(x_training, x_validation, y_training, y_validation)
 
@@ -171,12 +175,14 @@ def main():
     cbfs_feature_space = correlation_based_feature_selection(split_feature_label_data(df)[0], 0.6)
     print('Columns: {}'.format(cbfs_feature_space.columns))
     x_training_cbfs, x_validation_cbfs, y_training_cbfs, y_validation_cbfs = \
-        train_test_split(cbfs_feature_space, split_feature_label_data(df)[1], test_size=0.2, random_state=123)
+        train_test_split(cbfs_feature_space, split_feature_label_data(df)[1],
+                         test_size=validation_size, random_state=random_state)
     print_mse(LinearRegression(), x_training_cbfs, x_validation_cbfs, y_training_cbfs, y_validation_cbfs)
 
     pca_feature_space = pca(split_feature_label_data(df)[0], 2)
     x_training_pca, x_validation_pca, y_training_pca, y_validation_pca = \
-        train_test_split(pca_feature_space, split_feature_label_data(df)[1], test_size=0.2, random_state=123)
+        train_test_split(pca_feature_space, split_feature_label_data(df)[1],
+                         test_size=validation_size, random_state=random_state)
     print('------------ PCA results ------------')
     print_mse(LinearRegression(), x_training_pca, x_validation_pca, y_training_pca, y_validation_pca)
 
