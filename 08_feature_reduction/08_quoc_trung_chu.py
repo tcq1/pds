@@ -1,5 +1,4 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 
 from sklearn.linear_model import LinearRegression, Lasso
@@ -122,7 +121,7 @@ def correlation_based_feature_selection(df, threshold):
     correlation_matrix = np.zeros((df.shape[1], df.shape[1]))
     for i in range(len(df.columns)):
         for j in range(len(df.columns)):
-            correlation_matrix[i][j] = np.corrcoef(df[df.columns[i]], df[df.columns[j]])[0][1]
+            correlation_matrix[i][j] = abs(np.corrcoef(df[df.columns[i]], df[df.columns[j]])[0][1])
     # fill diagonals with 0 cause else they would be 1 and add some extra unwanted pairs
     np.fill_diagonal(correlation_matrix, 0)
     # find correlating features
@@ -153,9 +152,8 @@ def pca(df, p):
     """
     x = df
     y = np.transpose(x) @ x
-    eigval, eigvec = np.linalg.eig(y)
+    eigvec = np.linalg.eig(y)[1]
     w = eigvec
-    # w = np.transpose(w)
     wp = w[:, :p]
     tp = x @ wp
 
@@ -170,12 +168,12 @@ def main():
     task_1_2(x_training, x_validation, y_training, y_validation)
 
     print('------------ CBFS results ------------')
-    new = correlation_based_feature_selection(split_feature_label_data(df)[0], 0.6)
+    cbfs_feature_space = correlation_based_feature_selection(split_feature_label_data(df)[0], 0.6)
+    print('Columns: {}'.format(cbfs_feature_space.columns))
     x_training_cbfs, x_validation_cbfs, y_training_cbfs, y_validation_cbfs = \
-        train_test_split(new, split_feature_label_data(df)[1], test_size=0.2, random_state=123)
+        train_test_split(cbfs_feature_space, split_feature_label_data(df)[1], test_size=0.2, random_state=123)
     print_mse(LinearRegression(), x_training_cbfs, x_validation_cbfs, y_training_cbfs, y_validation_cbfs)
 
-    # pca
     pca_feature_space = pca(split_feature_label_data(df)[0], 2)
     x_training_pca, x_validation_pca, y_training_pca, y_validation_pca = \
         train_test_split(pca_feature_space, split_feature_label_data(df)[1], test_size=0.2, random_state=123)
