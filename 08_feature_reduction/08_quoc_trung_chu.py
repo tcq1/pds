@@ -154,8 +154,7 @@ def pca(df, p):
     """
     x = df
     y = np.transpose(x) @ x
-    eigvec = np.linalg.eig(y)[1]
-    w = eigvec
+    w = np.linalg.eig(y)[1]
     wp = w[:, :p]
     tp = x @ wp
 
