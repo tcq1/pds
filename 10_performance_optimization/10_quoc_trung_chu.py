@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import numpy as np
+import math
 import timeit
 
 from euclid import euclid_c
@@ -12,7 +13,7 @@ def euclidian_distance(p1, p2):
     :param p2: Point 2
     :return: float
     """
-    return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+    return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
 
 def euclidian_distance_serial(ds1, ds2):
@@ -79,10 +80,10 @@ def main():
     ds1 = np.random.rand(2000, 2) * 100
     ds2 = np.random.rand(2000, 2) * 100
 
-    result_s = benchmark_function(euclidian_distance_serial, ds1, ds2, "serial")   # ~11.45s
-    result_p = benchmark_function(run_parallel, ds1, ds2, "parallel")              # ~26.35s
-    result_c = benchmark_function(euclid_c, list(ds1), list(ds2), "cython")        # ~ 5.00s
-    result_v = benchmark_function(run_vectorized, ds1, ds2, "vectorized")          # ~ 0.10s
+    result_s = benchmark_function(euclidian_distance_serial, ds1, ds2, "serial")   # ~7.6s
+    result_p = benchmark_function(run_parallel, ds1, ds2, "parallel")              # ~22.8s
+    result_c = benchmark_function(euclid_c, list(ds1), list(ds2), "cython")        # ~ 5.3s
+    result_v = benchmark_function(run_vectorized, ds1, ds2, "vectorized")          # ~ 0.1s
 
     print("All calculations have the same solution: {}".format(result_s == result_p == result_c == result_v))
 
