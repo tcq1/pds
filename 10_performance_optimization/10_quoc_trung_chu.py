@@ -16,13 +16,11 @@ def euclidian_distance(p1, p2):
     return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
 
-def euclidian_distance_serial(ds1, ds2):
-    """ Calculate the euclidian distance for every point in ds1 to every point in ds2
+def run_default(ds1, ds2):
+    """ Default implementation using nested loops.
 
-    This function only calculates but doesn't return anything since only performance is measured.
-
-    :param ds1: numpy array with points
-    :param ds2: numpy array with points
+    :param ds1: list with points
+    :param ds2: list with points
     :return: list of distances
     """
     result = []
@@ -36,9 +34,9 @@ def euclidian_distance_serial(ds1, ds2):
 def run_parallel(ds1, ds2):
     """ Run the calculation using multiprocessing.
 
-    :param ds1: numpy array with points
-    :param ds2: numpy array with points
-    :return: list of result
+    :param ds1: list with points
+    :param ds2: list with points
+    :return: list of distances
     """
     pool = mp.Pool(processes=mp.cpu_count())
     result = pool.starmap(euclidian_distance, [(p1, p2) for p1 in ds1 for p2 in ds2])
@@ -57,35 +55,48 @@ def run_vectorized(ds1, ds2):
     return np.sqrt((np.square(ds1[:, np.newaxis] - ds2).sum(axis=2)))
 
 
-def benchmark_function(function, ds1, ds2, display_string):
-    """ Benchmark the functions.
+def compare_results():
+    """ Check if all methods return the same result by comparing the sum of all distances.
 
-    :param function: function to benchmark
-    :param ds1: first dataset of points
-    :param ds2: second dataset of points
-    :param display_string: additional string identifier to display when starting the benchmark
-    :return: sum of all distances for comparison
+    :return: boolean
     """
-    print("Starting {} calculation...".format(display_string))
-    start = timeit.default_timer()
-    result = np.sum(function(ds1, ds2))
-    end = timeit.default_timer()
-    print("Calculation took {}s.\n".format(end-start))
-
-    return result
-
-
-def main():
-    # generate random points from 0 to 100
     ds1 = np.random.rand(2000, 2) * 100
     ds2 = np.random.rand(2000, 2) * 100
 
-    result_s = benchmark_function(euclidian_distance_serial, ds1, ds2, "serial")   # ~7.6s
-    result_p = benchmark_function(run_parallel, ds1, ds2, "parallel")              # ~22.8s
-    result_c = benchmark_function(euclid_c, list(ds1), list(ds2), "cython")        # ~ 5.3s
-    result_v = benchmark_function(run_vectorized, ds1, ds2, "vectorized")          # ~ 0.1s
+    result_d = np.sum(run_default(ds1.tolist(), ds2.tolist()))
+    result_p = np.sum(run_parallel(ds1.tolist(), ds2.tolist()))
+    result_c = np.sum(euclid_c(ds1.tolist(), ds2.tolist()))
+    result_v = np.sum(np.sum(run_vectorized(ds1, ds2)))
 
-    print("All calculations have the same solution: {}".format(result_s == result_p == result_c == result_v))
+    return result_d == result_p == result_c == result_v
+
+
+def main():
+    setup = "from __main__ import euclidian_distance, run_default, run_parallel, run_vectorized;" \
+            "from euclid import euclid_c;" \
+            "import numpy as np; " \
+            "ds1 = np.random.rand(2000, 2) * 100; " \
+            "ds2 = np.random.rand(2000, 2) * 100"
+
+    number = 10
+    print("Default: {}s"
+          .format(timeit.timeit("run_default(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
+    # MemoryError occurs on number > 1 for parallel --> only benchmark with one run
+    print("Parallel: {}s"
+          .format(timeit.timeit("run_parallel(ds1.tolist(), ds2.tolist())", setup=setup, number=1)))
+    print("Cython: {}s"
+          .format(timeit.timeit("euclid_c(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
+    print("Vectorization: {}s"
+          .format(timeit.timeit("run_vectorized(ds1, ds2)", setup=setup, number=number) / number))
+
+    # print("All results equal: {}".format(compare_results()))
+
+    """ Results: 
+    Default: 2.5180055500000003s
+    Parallel: 2.032960799999998s
+    Cython: 1.77414122s
+    Vectorization: 0.11352067000000048s
+    """
 
 
 if __name__ == '__main__':
