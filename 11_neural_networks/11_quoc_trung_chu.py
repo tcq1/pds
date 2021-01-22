@@ -128,19 +128,5 @@ def main():
     """
 
 
-def test():
-    a_label = np.random.randint(0, 10, size=5)
-    a_feature = np.random.random(3)*10
-    b_label = np.random.randint(0, 10, size=5)
-    b_feature = np.random.random(3)*10
-    for i in range(4):
-        a_feature = np.vstack([a_feature, np.random.random(3)*10])
-        b_feature = np.vstack([b_feature, np.random.random(3)*10])
-    data = ((a_feature, a_label), (b_feature, b_label))
-    print(data)
-    print("Normalized:")
-    print(normalize_data(data))
-
-
 if __name__ == '__main__':
     main()
