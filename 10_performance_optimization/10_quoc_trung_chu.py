@@ -40,6 +40,7 @@ def run_parallel(ds1, ds2):
     """
     pool = mp.Pool(processes=mp.cpu_count())
     result = pool.starmap(euclidian_distance, [(p1, p2) for p1 in ds1 for p2 in ds2])
+    pool.close()
 
     return result
 
@@ -83,19 +84,19 @@ def main():
           .format(timeit.timeit("run_default(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
     # MemoryError occurs on number > 1 for parallel --> only benchmark with one run
     print("Parallel: {}s"
-          .format(timeit.timeit("run_parallel(ds1.tolist(), ds2.tolist())", setup=setup, number=1)))
+          .format(timeit.timeit("run_parallel(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
     print("Cython: {}s"
           .format(timeit.timeit("euclid_c(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
     print("Vectorization: {}s"
           .format(timeit.timeit("run_vectorized(ds1, ds2)", setup=setup, number=number) / number))
 
-    # print("All results equal: {}".format(compare_results()))
+    print("All results equal: {}".format(compare_results()))
 
     """ Results: 
-    Default: 2.5180055500000003s
-    Parallel: 2.032960799999998s
-    Cython: 1.77414122s
-    Vectorization: 0.11352067000000048s
+    Default: 2.49436669s
+    Parallel: 2.0338920399999996s
+    Cython: 1.7544557499999995s
+    Vectorization: 0.11555078999999964s
     """
 
 
