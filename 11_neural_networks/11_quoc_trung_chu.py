@@ -29,8 +29,10 @@ def get_model(data, w1, lmax):
     # add input layer
     model.add(keras.layers.InputLayer(input_shape))
     # add hidden layers
-    for i in range(1, len(widths)):
+    for i in range(len(widths)):
         model.add(keras.layers.Dense(widths[i], activation='relu'))
+    # add output layer
+    model.add(keras.layers.Dense(1))
     # compile and fit model
     model.compile(optimizer='adam', loss='mse')
     # fit model using the training data
@@ -64,7 +66,7 @@ def grid_search(data):
     """ Perform a grid search to find optimal values for w1 and lmax.
 
     :param data: normalized data
-    :return: ((w1_best, lmax_best), (mse, mse))
+    :return: ((w1_best, lmax_best), (mse))
     """
     # define the grid
     w_values = [1024, 512, 256, 128, 64, 32]
@@ -96,7 +98,6 @@ def main():
     model.evaluate(x=data[1][0], y=data[1][1])
 
     print("---------- Normalized dataset ----------")
-    print("Normalizing data...")
     normalized = normalize_data(data)
     model_ = get_model(normalized, w1, lmax)
     print("Evaluation:")
