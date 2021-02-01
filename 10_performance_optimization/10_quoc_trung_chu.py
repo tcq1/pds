@@ -61,8 +61,8 @@ def compare_results():
 
     :return: boolean
     """
-    ds1 = np.random.rand(2000, 2) * 100
-    ds2 = np.random.rand(2000, 2) * 100
+    ds1 = np.random.rand(100, 2) * 100
+    ds2 = np.random.rand(100, 2) * 100
 
     result_d = np.sum(run_default(ds1.tolist(), ds2.tolist()))
     result_p = np.sum(run_parallel(ds1.tolist(), ds2.tolist()))
@@ -79,10 +79,9 @@ def main():
             "ds1 = np.random.rand(2000, 2) * 100; " \
             "ds2 = np.random.rand(2000, 2) * 100"
 
-    number = 10
+    number = 5
     print("Default: {}s"
           .format(timeit.timeit("run_default(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
-    # MemoryError occurs on number > 1 for parallel --> only benchmark with one run
     print("Parallel: {}s"
           .format(timeit.timeit("run_parallel(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
     print("Cython: {}s"
