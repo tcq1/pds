@@ -92,7 +92,7 @@ def main():
 
     print("All results equal: {}".format(compare_results()))
 
-    """ Results: 
+    """ Results: (with 10 iterations, CPU has 12 threads)
     Default: 2.49436669s
     Parallel: 2.0338920399999996s
     Cython: 1.7544557499999995s
