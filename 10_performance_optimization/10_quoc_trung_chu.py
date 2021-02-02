@@ -79,7 +79,8 @@ def main():
             "ds1 = np.random.rand(2000, 2) * 100; " \
             "ds2 = np.random.rand(2000, 2) * 100"
 
-    number = 5
+    # number of benchmarking iterations
+    number = 10
     print("Default: {}s"
           .format(timeit.timeit("run_default(ds1.tolist(), ds2.tolist())", setup=setup, number=number) / number))
     print("Parallel: {}s"
